@@ -1,0 +1,13 @@
+# 运行时数据（首次启动自动生成）
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/llm-config.json
+!data/.gitkeep
+
+# 依赖与编辑器
+node_modules/
+.DS_Store
+*.log
+.idea/
+.vscode/

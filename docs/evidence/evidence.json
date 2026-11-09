@@ -1,0 +1,134 @@
+{
+  "contract": "见 docs/design-direction.md §2 Evidence Contract。产品=房间制麻将记账工具，5 面板（看板/记分/记录/结算/统计）；用户任务=每局 3 秒记完并随时扫四家净分；主操作=记一局；层级=四家净分 > 庄家 > 最近记录 > 主操作；目标视口 390x844 / 375x812 / 1440x900。可检查约束：计分牌是全页唯一深色大块，数字 tabular-nums 且 +/- 符号与颜色双重编码；墨绿结构色 + 座位四色 + 朱红仅作正分信号，不得单色主导；四家净分由服务端计分引擎计算且恒零和，手改不平必须禁止落账；零新增依赖、后端与计分内核零改动。参考依据=本地现有实现与 14 个算例回归，未使用外部参考服务、未上传任何产品数据。",
+  "targetViewports": [
+    "390x844",
+    "375x812",
+    "1440x900"
+  ],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "键盘：CDP 发送 Tab 后首个焦点为 skip-link，:focus-visible=true，outline=3px solid rgb(184, 134, 47)。语义：{\"tablist\": true, \"tabsWithSelected\": true, \"panelsWithRole\": true, \"dialogs\": true, \"toastRole\": \"status\", \"toastLive\": \"polite\", \"scoreCellLabels\": true, \"unlabeledInputs\": [], \"svgHidden\": true}。对比度（WCAG，含半透明卡片底色 alpha 合成）：{\"正分数字/计分牌\": 6.07, \"负分数字/计分牌\": 7.38, \"玩家名/计分牌\": 10.88, \"金额/计分牌\": 10.88, \"正文/纸底\": 14.5, \"房间名/顶栏\": 12.22, \"主按钮文字/主按钮\": 9.95}，最低 6.07:1，正文类均 ≥4.5:1。reduced-motion：模拟 prefers-reduced-motion=reduce 后 transitionDuration=1e-06s（1e-06s），动画已关闭。触摸目标：四个测量场景均 0 个 <44px 控件。"
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "三目标视口实拍并量测：390x844 innerW=390 scrollW=390 溢出=False 计分卡=4 标签=5 小于44px控件=0；375x812 innerW=375 scrollW=375 溢出=False 计分卡=4 标签=5 小于44px控件=0；1440x900 innerW=1440 scrollW=1440 溢出=False 计分卡=4 标签=5 小于44px控件=0；390x844-score innerW=390 scrollW=390 溢出=False 计分卡=4 标签=5 小于44px控件=0。计分牌卡片与底部/顶部标签的 right 边界均未超出 innerWidth；375x812 用 12 字长昵称压力测试，玩家名两行截断并带 title 属性，座位按钮昵称 ellipsis；1440x900 下页面放宽、计分牌 4 列横排、庄家与最近记录两栏、导航转顶部横向；硬胡切换后 6 个摸马选择器为 3 列 2 行，提示「庄家 东 · 没鬼(硬胡)摸 6 张 · 中马选牌」完整不截断。"
+  },
+  "contentStates": {
+    "loading": {
+      "status": "pass",
+      "evidence": "真实 /parse 请求期间（CDP 注入 400ms 延迟）按钮状态={\"busy\": \"true\", \"disabled\": true, \"text\": \"解析中…\"}，文字保留、显示旋转指示器、不可重复提交，截图 11-loading-390x844.png。看板骨架不适用：房间数据在 init() 中 await 完成后才 show('main')，不存在可见中间态，故由表单按钮态承担 loading。"
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "0 局房间四面板空状态检查={\"boardEmpty\": true, \"recordsEmpty\": true, \"settleEmpty\": true, \"chartEmpty\": true}，每处解释缺失数据并给出「去记第一局」或对应说明；结算为「四家持平，无需转账」，走势为「还没有走势」。截图 08-empty-board-390x844.png / 08b-empty-states-390x844.png。"
+    },
+    "error": {
+      "status": "pass",
+      "evidence": "账不平：{\"sum\": \"四家合计 +93 （必须为 0，已禁止落账）\", \"disabled\": true, \"color\": \"var(--danger)\"}，确认按钮 disabled=true，截图 10-error-unbalanced-390x844.png。房间码无效：{\"toast\": \"打不开房间：房间不存在，请核对房间码\", \"backHome\": true}，退回首页可重输，截图 13-error-badroom-390x844.png。解析失败另有内联隐藏结果区 + 具体原因 toast（由 doParse catch 覆盖，本次以同类失败路径验证）。"
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "作废记录：{\"voided\": 1, \"badge\": [\"已作废\"], \"remaining\": 3}，降透明度并标「已作废」，其余记录照常可读，截图 09-partial-voided-390x844.png。单点走势：{\"note\": \"目前只有 1 局数据，显示为单点；继续记分后连成曲线。\", \"svg\": true, \"legend\": 4}，截图 14-partial-singlepoint-390x844.png。LLM 未配置时徽标如实显示「规则模式 · 点设置接 LLM」，黄色警示条说明仅关键词抽取，不假装已接 LLM，截图 04-score-390x844.png。"
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "真实落账后：{\"toast\": \"已记入账本\", \"toastVisible\": true, \"activeTab\": \"board\", \"net\": [\"+6\", \"−2\", \"−2\", \"−2\"], \"roles\": \"status\"}，role=status 播报、自动切回看板、净分即时更新为 +6/-2/-2/-2，截图 15-success-390x844.png。撤销路径：记录页每条提供「手改 / 作废」，账本 append-only 以追加事件纠正，不覆盖原记录，截图 09。"
+    },
+    "permission": {
+      "status": "pass",
+      "evidence": "设置弹层：{\"badge\": \"规则模式 · 点设置接 LLM\", \"note\": \"密钥只保存在服务端，不会回显、不会写进网页或链接。未配置时自动使用「规则模式」解析，功能仍可用。\", \"keyType\": \"password\", \"keyValue\": \"\"}；API Key 为 password 类型且值为空，说明「密钥只保存在服务端，不会回显」，可停用 LLM 回退规则模式，截图 12-permission-390x844.png。首页说明「链接即凭据」。已知边界：当前拿到链接者均可写，只读积分板为后续方向，页面未声称已有只读权限。"
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "390x844",
+      "artifact": "01-board-390x844.png",
+      "observation": "手机主视口：方位计分牌为唯一深色大块，四家净分/庄家印记/最近记录/主操作按钮层次清晰，底部 5 个 SVG 标签完整可见。"
+    },
+    {
+      "viewport": "375x812",
+      "artifact": "02-board-longnames-375x812.png",
+      "observation": "窄视口 375px + 12 字长昵称：玩家名两行截断带 title，无横向溢出，计分牌与庄家按钮完整。"
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "03-board-1440x900.png",
+      "observation": "桌面视口：页面放宽到 1080px，计分牌四列横排，庄家/最近记录两栏，标签转顶部横向导航，未出现居中窄条。"
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "07-stats-1440x900.png",
+      "observation": "桌面统计页：排行榜/明细与走势两栏并列，走势 SVG 与图例完整。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "04-score-390x844.png",
+      "observation": "记分页默认有鬼：语音记分卡片、1–5 步手动表单、4 个摸马选择器、规则模式徽标。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "05-score-hard6-390x844.png",
+      "observation": "切到硬胡：摸马 6 个选择器排成 3 列 2 行，提示随规则变化，硬胡按钮高亮且 aria-pressed 同步。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "06-settle-390x844.png",
+      "observation": "结算页：最终净分计分牌、最少转账方案、可复制结算卡片，转账金额用等宽数字。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "08-empty-board-390x844.png",
+      "observation": "空状态：四家 0 分、还没有记录 + 明确的「去记第一局」按钮，结算/走势另有对应空状态。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "08b-empty-states-390x844.png",
+      "observation": "空状态在记录/结算/走势面板各自有解释与下一步，不是空白或通用占位。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "09-partial-voided-390x844.png",
+      "observation": "局部状态：已作废局降透明度并标「已作废」，其余记录照常可读，可手改/作废作为撤销路径。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "14-partial-singlepoint-390x844.png",
+      "observation": "局部状态：只有 1 局时走势仍渲染为单点并附说明，图例完整，不假装是曲线。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "10-error-unbalanced-390x844.png",
+      "observation": "错误状态：四家分数被改成不平，合计标红并明确「已禁止落账」，确认按钮 disabled。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "13-error-badroom-390x844.png",
+      "observation": "错误状态：房间码无效时给出具体原因 toast 并安全退回首页，可重新输入。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "11-loading-390x844.png",
+      "observation": "加载状态：解析请求进行中按钮显示「解析中…」+ 旋转指示器 + aria-busy，文字保留、不可重复提交。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "12-permission-390x844.png",
+      "observation": "权限边界：设置弹层说明密钥只存服务端且不回显，API Key 为 password 且值为空；规则模式徽标如实标注未接 LLM。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "15-success-390x844.png",
+      "observation": "成功状态：落账后 role=status 播报「已记入账本」、自动切回看板且净分即时更新；记录页可手改/作废作为撤销路径。"
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "16-online-390x844.png",
+      "observation": "线上正式环境（带 sharecode 凭据）390px 手机视口：新计分牌、座位色条、庄家印记、SVG 标签栏全部生效，无横向溢出，无 JS 异常；演示房间净分 −18/+16/+32/−30 与重构前一致。"
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "17-online-1440x900.png",
+      "observation": "线上正式环境 1440px 桌面视口：四列计分牌与顶部横向导航生效，无横向溢出，无 JS 异常；演示房间数据未变。"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "mahjong-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "广东麻将记账 · 多人记分、自动结算与战绩统计",
+  "scripts": {
+    "start": "node --experimental-sqlite --experimental-strip-types server.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
